@@ -1,24 +1,22 @@
-<?php require_once __DIR__.'/vendor/autoload.php';
+<?php require_once __DIR__.'/init.php';
 
-use GO\Scheduler;
-use Mailgun\Mailgun;
+ 
+$cmd = 'ls -la';
 
-$scheduler = new Scheduler();
-
-
-/*
-$cmd = 'echo $(date)';
-
-$scheduler->raw($cmd)->at('* * * * *')->then(function ($output) use ($logfile, $cnt)
+$scheduler
+	->raw($cmd, [], 'sample-cron')
+	->at('* * * * *')
+	->before(function () use ($mg, $msg_params)
 {
-	$mg = Mailgun::create("key");
-	$ret = $mg->messages()->send("domain", array(
-		'from' => 'noreply@example.com',
-		'to' => 'example@gmail.com',
-		'subject' => 'test cron setup scorpion',
-		'text' => 'test message. '.(is_array($output) ? implode("\n", $output) : $output),
-	));
+		$msg_params = array_merge($msg_params, ['subject' => 'pre command subject', 'text' => 'pre command body']);
+		
+		$ret = $mg->messages()->send(getenv('MG_DOMAIN'), $msg_params);
+	})
+	->then(function ($output) use ($mg, $msg_params)
+{
+		$output = (is_array($output) ? implode("\n", $output) : $output);
+		$msg_params = array_merge($msg_params, ['subject' => 'post command subject', 'text' => 'post command body :'.$output]);
+		$ret = $mg->messages()->send(getenv('MG_DOMAIN'), $msg_params);
+	});
 
-});
-*/
 $scheduler->run();
